@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tablero de Avisos</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+    <h1>📣 Tablero de Avisos</h1>
+
+    <div style="margin-bottom: 20px;">
+        <label for="filtro-categorias"><strong>Filtrar por categoría:</strong></label>
+        <select id="filtro-categorias" onchange="obtenerAvisos(this.value)" style="padding: 5px; border-radius: 5px;">
+            <option value="">Todas</option>
+        </select>
+    </div>
+    
+    <div id="contenedor-avisos">
+        <p>Cargando la información...</p>
+    </div>
+
+    <script>
+        const URL_AVISOS = 'http://127.0.0.1:8000/api/avisos/';
+        const URL_CATEGORIAS = 'http://127.0.0.1:8000/api/categorias/'; // 2. NUEVO: La ruta para pedir las categorías
+
+        // 3. NUEVA FUNCIÓN: Va a Django, trae las categorías y llena el menú desplegable
+        async function cargarCategorias() {
+            try {
+                const respuesta = await fetch(URL_CATEGORIAS);
+                const categorias = await respuesta.json();
+                
+                const select = document.getElementById('filtro-categorias');
+                
+                categorias.forEach(cat => {
+                    // Por cada categoría, agrega una opción en el menú <select>
+                    select.innerHTML += `<option value="${cat.id}">${cat.nombre}</option>`;
+                });
+            } catch (error) {
+                console.error("Error al cargar categorías:", error);
+            }
+        }
+
+        // 4. MODIFICACIÓN: Ahora la función acepta un ID de categoría para filtrar
+        async function obtenerAvisos(categoriaId = '') {
+            try {
+                // Si hay un ID seleccionado, le pegamos el "?categoria=" al final de la URL
+                let urlFinal = URL_AVISOS;
+                if (categoriaId !== '') {
+                    urlFinal += `?categoria=${categoriaId}`;
+                }
+
+                const respuesta = await fetch(urlFinal);
+                const avisos = await respuesta.json();
+                
+                const contenedor = document.getElementById('contenedor-avisos');
+                contenedor.innerHTML = ''; 
+
+                if (avisos.length === 0) {
+                    contenedor.innerHTML = '<p>No hay avisos en esta categoría.</p>';
+                    return;
+                }
+
+                avisos.forEach(aviso => {
+                    const fechaLimpia = new Date(aviso.fecha_creacion).toLocaleDateString();
+
+                    const tarjetaHTML = `
+                        <div class="aviso-card">
+                            <span class="categoria">${aviso.categoria_nombre}</span>
+                            <h2>${aviso.titulo}</h2>
+                            <p>${aviso.contenido}</p>
+                            <span class="fecha">Publicado el: ${fechaLimpia}</span>
+                        </div>
+                    `;
+                    contenedor.innerHTML += tarjetaHTML;
+                });
+
+            } catch (error) {
+                console.error("Hubo un error de conexión:", error);
+                document.getElementById('contenedor-avisos').innerHTML = '<p>Error al cargar los avisos.</p>';
+            }
+        }
+
+        // Arrancamos las dos funciones al abrir la página
+        cargarCategorias();
+        obtenerAvisos();
+    </script>
+
+</body>
+</html>
